@@ -1,6 +1,7 @@
 /**
   * Created by fonturacetamum on 04/09/16.
   */
+
 object KGramGenerator {
   def generate(query: String, k: Int): List[String] = {
     query.split(" ")
