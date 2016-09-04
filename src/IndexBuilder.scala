@@ -10,7 +10,7 @@ object IndexBuilder {
     string.replaceAll("[^A-Za-z0-9 -]", "").toLowerCase
   }
 
-  def buildInvertedIndex(corpusFilenames: List[String]) = { //: Map[String, List[(Int, String)]] = {
+  def buildInvertedIndex(corpusFilenames: List[String]): Map[String, List[(Int, String)]] = {
     def mergeMaps[A, B](mergeFunction: (B, B) => B)(leftMap: Map[A, B], rightMap: Map[A, B]): Map[A, B] = {
       leftMap ++
         rightMap.filter(rTuple => !leftMap.contains(rTuple._1)) ++
