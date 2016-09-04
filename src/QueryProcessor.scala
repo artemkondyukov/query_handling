@@ -29,23 +29,4 @@ object QueryProcessor {
       .map(word => index(word))
       .reduce(simpleIntersect)
   }.toList
-
-  def generateKGrams(query: String, k: Int): List[String] = {
-    query.split(" ")
-      .map(word => (1 to word.length)
-                    .toList
-                    .map(index =>
-                      ("$" + word + "$").takeRight(word.length - index + 3).take(k)))
-      .reduce(_ ::: _)
-  }
-
-  def generatePermuterm(query: String): List[String] = {
-    query.split(" ")
-      .map(word => (1 to word.length + 1)
-                    .toList
-                    .map(index =>
-                      (word + "$").takeRight(word.length + 2 - index) + (word + "$").take(index - 1)
-                    ))
-      .reduce(_ ::: _)
-  }
 }
