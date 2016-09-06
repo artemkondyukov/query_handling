@@ -1,4 +1,4 @@
-import scala.annotation.tailrec
+import scala.collection.immutable.TreeMap
 import scala.util.matching.Regex
 
 /**
@@ -43,9 +43,9 @@ object QueryProcessor {
       .map( wordList =>
         wordList
           .map(word => index(word).toSet)
-          .reduce(_.union(_))
+          .reduce(_ union _)
       )
-      .reduce(_.intersect(_))
+      .reduce(_ intersect _)
   }
 
   // A kgram based implementation
@@ -73,19 +73,43 @@ object QueryProcessor {
         .map(wLists =>
           wLists._1
             .map(wList => wList.filter(word => wLists._2.findFirstIn(word).isDefined))
-            .reduce(_.intersect(_)))
+            .reduce(_ intersect _)
+        )
         .map(pList =>
           pList
             .map(word =>
               index(word)
               .map(_._2)
               .toSet)
-            .reduce(_.union(_))
+            .reduce(_ union _)
         )
-        .reduce(_.intersect(_))
+        .reduce(_ intersect _)
     }
     else
       Nil
+  }
+
+  def evaluateWildcardQueryPermutation(query: String, index: Map[String, List[(Int, String)]],
+                                    permutationIndex: TreeMap[String, String]) = {
+    val queryWords = preprocessQuery(query).split(" ")
+    queryWords
+      .map(word => {
+        val asteriskPositions = """\.\*""".r.findAllMatchIn(word).toList
+        val permutedWord = word.takeRight(word.length - 2 - asteriskPositions.last.start) + "$" +
+          word.take(asteriskPositions.head.start)
+        val matchWords = permutationIndex
+          .range(permutedWord, permutedWord.init + (permutedWord.last + 1).toChar)
+          .values
+          .filter(wordInRange => word.r.findFirstIn(wordInRange).isDefined)
+        if (matchWords.nonEmpty)
+          matchWords
+            .map(matchWord => index(matchWord).toSet)
+          .reduce(_ union _)
+        else
+          Set.empty[(Int, String)]
+      }
+      )
+      .reduce(_ intersect _)
   }
 
   def evaluateFuzzyQueryKGram(query: String, index: Map[String, List[(Int, String)]],
@@ -112,8 +136,8 @@ object QueryProcessor {
         .map(wordCountTuple =>
           index(wordCountTuple._1).map(_._2).toSet
         )
-        .reduce(_.union(_))
+        .reduce(_ union _)
       )
-    .reduce(_.intersect(_))
+    .reduce(_ intersect _)
   }
 }
