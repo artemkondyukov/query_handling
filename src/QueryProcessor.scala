@@ -38,7 +38,7 @@ object QueryProcessor {
   }
 
   // A very dull implementation, linear in size of vocabulary
-  def evaluateWildcardQueryLinear(query: String, index: Map[String, List[(Int, String)]]) : List[(Int, String)] = {
+  def evaluateWildcardQueryLinear(query: String, index: Map[String, List[(Int, String)]]) : Set[(Int, String)] = {
     val words = preprocessQuery(query).split(" ").map(_.r)
     index
       .toList
