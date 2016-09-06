@@ -26,7 +26,7 @@ object IndexBuilder {
     string.replaceAll("[^A-Za-z0-9 -]", "").toLowerCase
   }
 
-  def buildInvertedIndex(corpusFilenames: List[String], reversed: Boolean): TreeMap[String, List[(Int, String)]] = {
+  def buildInvertedIndex(corpusFilenames: List[String], reversed: Boolean = false): TreeMap[String, List[(Int, String)]] = {
     def mergeMapsInner = {
       mergeMaps((lTuple: List[(Int, String)], rTuple: List[(Int, String)]) =>
         List((lTuple.head._1 + rTuple.head._1, rTuple.head._2))) (
@@ -52,7 +52,11 @@ object IndexBuilder {
 
   def buildKGramIndex(vocabulary: List[String], k: Int = 2): TreeMap[String, List[String]] = {
     vocabulary
-      .map(word => KGramGenerator.generate(word, k).map(kgram => kgram -> List(word)).toMap)
+      .map(word =>
+        TreeMap(
+        KGramGenerator
+          .generate(word, k)
+          .map(kgram => kgram -> List(word)):_*))
       .reduce((lMap: TreeMap[String, List[String]], rMap: TreeMap[String, List[String]]) =>
         mergeMapsListConcatValues(lMap, rMap)
       )
@@ -60,12 +64,16 @@ object IndexBuilder {
 
   def buildPermutationIndex(vocabulary: List[String]): TreeMap[String, String] = {
     vocabulary
-      .map(word => PermutermGenerator.generate(word).map(perm => perm -> word).toMap)
+      .map(word =>
+        TreeMap(
+        PermutermGenerator
+          .generate(word)
+          .map(perm => perm -> word):_*))
       .reduce(_ ++ _)
   }
 
   def getStopWords(index: TreeMap[String, List[(Int, String)]], num: Int) = {
-    val sumCounts: TreeMap[String, Int] = index.mapValues(list => list.foldLeft(0)((sum, rTuple) => sum + rTuple._1))
+    val sumCounts: Map[String, Int] = index.mapValues(list => list.foldLeft(0)((sum, rTuple) => sum + rTuple._1))
     scala.util.Sorting.stableSort(sumCounts.toList,
       (left: (String, Int), right: (String, Int)) => left._2 > right._2).take(10)
   }
