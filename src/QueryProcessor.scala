@@ -71,6 +71,14 @@ object QueryProcessor {
             if (wordMap contains kGramWord) kGramWord -> (wordMap(kGramWord) + 1)
             else kGramWord -> 1
           ).toMap)
-    )
+        .toList
+        .sortBy(- _._2)
+        .take(3)
+        .map(wordCountTuple =>
+          index(wordCountTuple._1).map(_._2).toSet
+        )
+        .reduce(_.union(_))
+      )
+    .reduce(_.intersect(_))
   }
 }
