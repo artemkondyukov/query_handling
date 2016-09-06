@@ -49,7 +49,7 @@ object IndexBuilder {
     )
   }
 
-  def buildKGramIndex(vocabulary: List[String], k: Int = 3): Map[String, List[String]] = {
+  def buildKGramIndex(vocabulary: List[String], k: Int = 2): Map[String, List[String]] = {
     vocabulary
       .map(word => KGramGenerator.generate(word, k).map(kgram => kgram -> List(word)).toMap)
       .reduce((lMap: Map[String, List[String]], rMap: Map[String, List[String]]) =>
