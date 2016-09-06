@@ -3,7 +3,7 @@
   */
 
 object KGramGenerator {
-  def generate(query: String, k: Int): List[String] = {
+  def generate(query: String, k: Int = 3): List[String] = {
     query.split(" ")
       .map(word => (1 to word.length)
         .toList
