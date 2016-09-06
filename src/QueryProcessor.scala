@@ -49,11 +49,28 @@ object QueryProcessor {
   }
 
   // A kgram based implementation
-  def evaluateWildcardQueryKGram(query: String, index: Map[String, List[Int]]): List[Int] = {
-    Nil
+  def evaluateWildcardQueryKGram(query: String, index: Map[String, List[Int]]) = {//: List[Int] = {
+    ???
   }
 
-  def evaluateFuzzyQuery(query: String, index: Map[String, List[Int]]): List[Int] = {
-    Nil
+  def evaluateFuzzyQueryKGram(query: String, index: Map[String, List[(Int, String)]],
+                              kGramIndex: Map[String, List[String]]) = {//: List[Int] = {
+    val queryKGrams = query
+      .split(" ")
+      .map(word => KGramGenerator.generate(word))
+    queryKGrams
+      .map(kGramList =>
+        kGramList
+          .flatMap(kGram => kGramIndex.get(kGram))
+      )
+      .map(queryWordResult =>
+      queryWordResult
+        .foldLeft(Map.empty[String, Int])((wordMap, kGramWordList) =>
+          wordMap ++
+          kGramWordList.map(kGramWord =>
+            if (wordMap contains kGramWord) kGramWord -> (wordMap(kGramWord) + 1)
+            else kGramWord -> 1
+          ).toMap)
+    )
   }
 }
