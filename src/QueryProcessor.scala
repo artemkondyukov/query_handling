@@ -49,8 +49,43 @@ object QueryProcessor {
   }
 
   // A kgram based implementation
-  def evaluateWildcardQueryKGram(query: String, index: Map[String, List[Int]]) = {//: List[Int] = {
-    ???
+  def evaluateWildcardQueryKGram(query: String, index: Map[String, List[(Int, String)]],
+                                 kGramIndex: Map[String, List[String]]) = {//: List[Int] = {
+    val words = preprocessQuery(query).split(" ").map(_.r)
+    val queryKGrams: List[List[String]] = query
+      .split(" ")
+      .map(word => KGramGenerator.generate(word).filter(!_.contains('*')))
+      .toList
+    val kGramsMatchingWordsLists: List[List[List[String]]] = queryKGrams
+      .map(kGramsList => {
+        if (kGramsList.nonEmpty)
+          kGramsList
+            .map(kGram => kGramIndex.get(kGram))
+            .collect { case Some(x) => x }
+        else
+          List(index.keys.toList)
+      }
+      )
+//    kGramsMatchingWordsLists foreach println
+    if (kGramsMatchingWordsLists.forall(_.nonEmpty)) {
+      kGramsMatchingWordsLists
+        .zip(words)
+        .map(wLists =>
+          wLists._1
+            .map(wList => wList.filter(word => wLists._2.findFirstIn(word).isDefined))
+            .reduce(_.intersect(_)))
+        .map(pList =>
+          pList
+            .map(word =>
+              index(word)
+              .map(_._2)
+              .toSet)
+            .reduce(_.union(_))
+        )
+        .reduce(_.intersect(_))
+    }
+    else
+      Nil
   }
 
   def evaluateFuzzyQueryKGram(query: String, index: Map[String, List[(Int, String)]],
