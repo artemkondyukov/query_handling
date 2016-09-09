@@ -3,7 +3,7 @@
   */
 object Levenshtein {
   val insertion_cost = 1
-  val alphabet = (1 to 26).toList.map(n => (n + 96).toChar)
+  val alphabet = (0 to 127).toList.map(n => n.toChar)
   // By now it's just a mock, but substitution matrix should represent relative positions of keys on the keyboard
   val sub_matrix = alphabet.flatMap(char => alphabet.map(char_in =>
     (char -> char_in) -> (if (char == char_in) 0 else 1)))
