@@ -168,4 +168,23 @@ object QueryProcessor {
     }
     evaluateFuzzyQueryKGram(query, index, kGramIndex, filterFunction)
   }
+
+  def evaluateFuzzyQueryEditDistanceOnly(query: String, index: Map[String, List[(Int, String)]],
+                                         mostProximateEditDistance: Int = 3) = {
+    query
+      .split(" ")
+      .map(queryWord =>
+//        queryWord ->
+          index
+            .keys
+            .map(term =>
+              term -> Levenshtein.distance(queryWord, term))
+            .toList
+            .sortBy(_._2)
+            .take(mostProximateEditDistance)
+            .map(term => index(term._1).map(_._2).toSet)
+            .reduce(_ union _)
+      )
+      .reduce(_ intersect _)
+  }
 }
