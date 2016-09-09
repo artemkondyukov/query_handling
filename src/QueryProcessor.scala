@@ -12,13 +12,13 @@ object QueryProcessor {
   // Simple boolean queries using non-positional index
   def evaluateBooleanQuery(query: String, index: Map[String, List[(Int, String)]]): Set[(Int, String)] = {
     query.split(" ")
-      .map(word => index(word).toSet)
-      .reduce(_.intersect(_))
+      .map(word => index.getOrElse(word, List.empty[(Int, String)]).toSet)
+      .reduce(_ intersect _)
   }
 
   // A very dull implementation, linear in size of vocabulary
   def evaluateWildcardQueryLinear(query: String, index: Map[String, List[(Int, String)]]) : Set[(Int, String)] = {
-    val words = preprocessQuery(query).split(" ").map(_.r)
+    val words = preprocessQuery(query).split(" ").map(w => ("^" + w + "$").r)
     index
       .toList
       .flatMap {
@@ -174,7 +174,6 @@ object QueryProcessor {
     query
       .split(" ")
       .map(queryWord =>
-//        queryWord ->
           index
             .keys
             .map(term =>
