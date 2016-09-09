@@ -6,14 +6,14 @@ import scala.language.postfixOps
   */
 
 object IndexBuilder {
-  def mergeMaps[A, B](mergeFunction: (B, B) => B)(leftMap: TreeMap[A, B], rightMap: TreeMap[A, B]): TreeMap[A, B] = {
+  private def mergeMaps[A, B](mergeFunction: (B, B) => B)(leftMap: TreeMap[A, B], rightMap: TreeMap[A, B]): TreeMap[A, B] = {
     leftMap ++
       rightMap.filter(rTuple => !leftMap.contains(rTuple._1)) ++
       rightMap.filter(rTuple => leftMap.contains(rTuple._1))
         .map(rTuple => rTuple._1 -> mergeFunction(leftMap(rTuple._1), rTuple._2))
   }
 
-  def mergeMapsListConcatValues[A] = {
+  private def mergeMapsListConcatValues[A] = {
     mergeMaps((leftList: List[A], rightList: List[A]) =>
       leftList ::: rightList) (
       _: TreeMap[String, List[A]],
