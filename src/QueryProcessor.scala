@@ -33,10 +33,7 @@ object QueryProcessor {
       .foldLeft(Map.empty[Regex, List[String]])((l, r: (String, List[Regex])) =>
         l ++
         r._2
-          .map ( regex =>
-            if (l contains regex) regex -> (r._1 :: l(regex))
-            else regex -> (r._1 :: Nil)
-          )
+          .map ( regex => regex -> (r._1 :: l.getOrElse(regex, Nil)) )
           .toMap
       )
       .values
@@ -48,7 +45,6 @@ object QueryProcessor {
       .reduce(_ intersect _)
   }
 
-  // A kgram based implementation
   def evaluateWildcardQueryKGram(query: String, index: Map[String, List[(Int, String)]],
                                  kGramIndex: Map[String, List[String]]) = {//: List[Int] = {
     val words = preprocessQuery(query).split(" ").map(_.r)
@@ -56,37 +52,38 @@ object QueryProcessor {
       .split(" ")
       .map(word => KGramGenerator.generate(word).filter(!_.contains('*')))
       .toList
+    queryKGrams foreach println
     val kGramsMatchingWordsLists: List[List[List[String]]] = queryKGrams
       .map(kGramsList => {
         if (kGramsList.nonEmpty)
           kGramsList
             .map(kGram => kGramIndex.get(kGram))
-            .collect { case Some(x) => x }
+            .collect {
+              case Some(x) => x
+              case None => Nil
+            }
         else
           List(index.keys.toList)
       }
       )
 //    kGramsMatchingWordsLists foreach println
-    if (kGramsMatchingWordsLists.forall(_.nonEmpty)) {
-      kGramsMatchingWordsLists
-        .zip(words)
-        .map(wLists =>
-          wLists._1
-            .map(wList => wList.filter(word => wLists._2.findFirstIn(word).isDefined))
-            .reduce(_ intersect _)
-        )
-        .map(pList =>
-          pList
-            .map(word =>
-              index(word)
-              .map(_._2)
-              .toSet)
-            .reduce(_ union _)
-        )
-        .reduce(_ intersect _)
-    }
-    else
-      Nil
+    if (kGramsMatchingWordsLists.exists(_.exists(_.isEmpty))) Nil else
+    kGramsMatchingWordsLists
+      .zip(words)
+      .map(wLists =>
+        wLists._1
+          .map(wList => wList.filter(word => wLists._2.findFirstIn(word).isDefined))
+          .reduce(_ intersect _)
+      )
+      .map(pList =>
+        pList
+          .map(word =>
+            index(word)
+            .map(_._2)
+            .toSet)
+          .reduce(_ union _)
+      )
+      .reduce(_ intersect _)
   }
 
   def evaluateWildcardQueryPermutation(query: String, index: Map[String, List[(Int, String)]],
@@ -112,8 +109,9 @@ object QueryProcessor {
       .reduce(_ intersect _)
   }
 
-  def evaluateFuzzyQueryKGram(query: String, index: Map[String, List[(Int, String)]],
-                              kGramIndex: Map[String, List[String]]) = {//: List[Int] = {
+  private def evaluateFuzzyQueryKGram(query: String, index: Map[String, List[(Int, String)]],
+                              kGramIndex: Map[String, List[String]],
+                              filterFunction: List[(String, Int)] => List[(String, Int)]) = {//: List[Int] = {
     val queryKGrams = query
       .split(" ")
       .map(word => KGramGenerator.generate(word))
@@ -122,22 +120,52 @@ object QueryProcessor {
         kGramList
           .flatMap(kGram => kGramIndex.get(kGram))
       )
-      .map(queryWordResult =>
-      queryWordResult
-        .foldLeft(Map.empty[String, Int])((wordMap, kGramWordList) =>
-          wordMap ++
-          kGramWordList.map(kGramWord =>
-            if (wordMap contains kGramWord) kGramWord -> (wordMap(kGramWord) + 1)
-            else kGramWord -> 1
-          ).toMap)
-        .toList
-        .sortBy(- _._2)
-        .take(3)
-        .map(wordCountTuple =>
-          index(wordCountTuple._1).map(_._2).toSet
-        )
+      .map(queryWordResult => {
+        val wordsUnfiltered = queryWordResult
+          .foldLeft(Map.empty[String, Int])((wordMap, kGramWordList) =>
+            wordMap ++
+              kGramWordList.map(kGramWord =>
+                kGramWord -> (wordMap.getOrElse(kGramWord, 0) + 1)
+              ).toMap)
+          .toList
+        filterFunction(wordsUnfiltered)
+          .map(wordCountTuple =>
+            index(wordCountTuple._1).map(_._2).toSet
+          )
+      }
         .reduce(_ union _)
       )
     .reduce(_ intersect _)
+  }
+
+  def evaluateFuzzyQueryKGramEditDistance(query: String, index: Map[String, List[(Int, String)]],
+                                         kGramIndex: Map[String, List[String]],
+                                         mostProximateKGram: Int = 10,
+                                         mostProximateEditDistance: Int = 3) = {
+    def filterFunction(wordSimilarities: List[(String, Int)]): List[(String, Int)] = {
+      query
+        .split(" ")
+        .zip(wordSimilarities)
+        .sortBy(_._2._2)
+        .take(mostProximateKGram)
+        .map(wordSim =>
+          wordSim._2._1 -> Levenshtein.distance(wordSim._1, wordSim._2._1)
+        )
+        .sortBy(_._2)
+        .toList
+        .take(mostProximateEditDistance)
+    }
+    evaluateFuzzyQueryKGram(query, index, kGramIndex, filterFunction)
+  }
+
+  def evaluateFuzzyQueryKGramOnly(query: String, index: Map[String, List[(Int, String)]],
+                                    kGramIndex: Map[String, List[String]],
+                                    mostProximateKGram: Int = 5) = {
+    def filterFunction(wordSimilarities: List[(String, Int)]): List[(String, Int)] = {
+      wordSimilarities
+        .sortBy(_._2)
+        .take(mostProximateKGram)
+    }
+    evaluateFuzzyQueryKGram(query, index, kGramIndex, filterFunction)
   }
 }
